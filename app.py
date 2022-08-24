@@ -23,15 +23,19 @@ def check_url(url: str) -> str:
     website_name = re.search('https?://([A-Za-z_0-9.-]+).*', url).group(1)
     click.echo(f"Checking URL {url} now.")
 
-    google_pattern = r"fonts.googleapis.com"
+    google_pattern = r"fonts.googleapis.com/css"
 
     match = re.search(google_pattern, string=website.text)
     if match:
         click.echo(f"The Website {url} contains Google-Fonts. Change that now!")
         soup = BeautifulSoup(website.content, "html.parser")
-        google_fonts_url = soup.find("link", attrs={'href': re.compile(r'fonts.googleapis.com')})
-        if google_fonts_url["href"].startswith("//"):
-            google_css = httpx.get(f"https:{google_fonts_url['href']}", headers=headers)
+        google_fonts_url = soup.find("link", attrs={'href': re.compile(r'fonts.googleapis.com/css')})
+        find_font_link = re.search(r"(https?|//)", google_fonts_url["href"]).group()
+        if find_font_link:
+            css_link = google_fonts_url["href"]
+            if find_font_link == "//":
+                css_link = "https:" + google_fonts_url["href"]
+            google_css = httpx.get(css_link, headers=headers)
             woff_files = re.findall(r"url\((.*?)\)", google_css.text)
             for font in woff_files:
                 font_name = re.search(r"[\w_-]+.(woff2?|ttf)", font).group(0)
